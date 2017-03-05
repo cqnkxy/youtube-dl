@@ -46,3 +46,5 @@ youtube-dl.zsh
 *.iml
 
 tmp/
+venv/
+

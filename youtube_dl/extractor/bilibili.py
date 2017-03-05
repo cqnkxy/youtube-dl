@@ -58,6 +58,8 @@ class BiliBiliIE(InfoExtractor):
 
     _APP_KEY = '84956560bc028eb7'
     _BILIBILI_KEY = '94aba54af9065f71de72f5508f1cd42e'
+    # No way to distinguish a playlist or a single video.
+    _recursion_depth = 1
 
     def _report_error(self, result):
         if 'message' in result:
@@ -67,6 +69,18 @@ class BiliBiliIE(InfoExtractor):
         else:
             raise ExtractorError('Can\'t extract Bangumi episode ID')
 
+    def _extract_playlist(self, webpage, url):
+        album_title = self._search_regex(
+            r'<title>(.*?)</title>', webpage, 'album title', fatal=False)
+        options = self._search_regex(re.compile(
+            r'<div id="plist">(.*?)</div>', re.DOTALL), webpage, 'options')
+        playlist_count = sum(1 for _ in re.finditer(
+            re.compile(r'<option value', re.MULTILINE), options))
+        urls = [self.url_result('{}/index_{}.html'.format(url, i + 1))
+                for i in range(playlist_count)]
+        self._recursion_depth -= 1
+        return self.playlist_result(urls, playlist_title=album_title)
+
     def _real_extract(self, url):
         url, smuggled_data = unsmuggle_url(url, {})
 
@@ -74,6 +88,17 @@ class BiliBiliIE(InfoExtractor):
         video_id = mobj.group('id')
         anime_id = mobj.group('anime_id')
         webpage = self._download_webpage(url, video_id)
+
+        if self._recursion_depth > 0:
+            if self._downloader.params.get('noplaylist'):
+                self.to_screen(
+                    'Downloading just video because of --no-playlist')
+            else:
+                playlist_result = self._extract_playlist(webpage, url)
+                if playlist_result:
+                    self.to_screen(
+                        'Downloading playlist - add --no-playlist to just download video')
+                    return playlist_result
 
         if 'anime/' not in url:
             cid = compat_parse_qs(self._search_regex(
