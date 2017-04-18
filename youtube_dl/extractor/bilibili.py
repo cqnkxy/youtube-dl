@@ -72,8 +72,8 @@ class BiliBiliIE(InfoExtractor):
     def _extract_playlist(self, webpage, url):
         album_title = self._search_regex(
             r'<title>(.*?)</title>', webpage, 'album title', fatal=False)
-        options = self._search_regex(re.compile(
-            r'<div id="plist">(.*?)</div>', re.DOTALL), webpage, 'options')
+        options = self._search_regex(
+            re.compile(r'<div id="plist">(.*?)</div>', re.DOTALL), webpage, 'options')
         playlist_count = sum(1 for _ in re.finditer(
             re.compile(r'<option value', re.MULTILINE), options))
         urls = [self.url_result('{}/index_{}.html'.format(url, i + 1))
